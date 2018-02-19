@@ -1,6 +1,7 @@
 # dse_capstone
 We try to mimic the directory structure and cookiecutter https://drivendata.github.io/cookiecutter-data-science/, with some adjustment for simplicity.
 
+<pre>
 ├── README.md          <- The top-level README for developers using this project.
 ├── data
 │   ├── external       <- Data from third party sources.
@@ -42,3 +43,5 @@ We try to mimic the directory structure and cookiecutter https://drivendata.gith
 │       └── visualize.py
 │
 └── misc
+
+</pre>
