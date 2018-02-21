@@ -1,4 +1,8 @@
 # dse_capstone
+## python modules need be installed
+* pip install python-dotenv
+
+## directory structure
 We try to mimic the directory structure and cookiecutter https://drivendata.github.io/cookiecutter-data-science/, with some adjustment for simplicity.
 
 <pre>
@@ -45,3 +49,5 @@ We try to mimic the directory structure and cookiecutter https://drivendata.gith
 └── misc
 
 </pre>
+
+
