@@ -43,7 +43,7 @@ CREATE TABLE county_properties (
     par_status                            varchar(1),
     par_parcel_number                     varchar(10),
     par_tax_rate_area                     varchar(5),
-    par_land_use_code                     varchar(3),
+    par_land_use_code                     integer,
     par_report_group                      varchar(3),
     par_neighborhood                      varchar(2),
     par_appraiser_id                      varchar(5),
