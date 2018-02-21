@@ -1,0 +1,5 @@
+data
+.env
+*.bak
+__pycache__
+.ipynb_checkpoints

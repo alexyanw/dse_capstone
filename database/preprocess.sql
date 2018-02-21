@@ -26,14 +26,14 @@ FROM county_properties
 ;
 
 -- cleaning: excluding invalid, outlier
-DROP VIEW IF EXISTS property_features;
+DROP VIEW IF EXISTS property_features CASCADE;
 CREATE VIEW property_features AS
 SELECT 
     par_parcel_number AS pin,
 	par_year_effective AS year_built,
     par_total_lvg_area AS sqft,
     par_bedrooms AS num_bed,
-    par_bathroom AS num_bath,
+    par_bathroom/10 AS num_bath,
     par_pool AS pool,
     par_view AS view
 FROM properties
@@ -49,10 +49,10 @@ SELECT
     doc_date date,
     price sold_price
 FROM county_transactions
-WHERE price > 0 AND code != 'M'
+WHERE code != 'M'
 ;
 
-DROP VIEW IF EXISTS addresses;
+DROP VIEW IF EXISTS addresses CASCADE;
 CREATE VIEW addresses AS
 SELECT
     a.pin,
@@ -84,7 +84,7 @@ CREATE VIEW property_transactions AS
 SELECT
     p.*,
     t.sold_price, t.date,
-    EXTRACT(YEAR from t.date) - year_built AS sold_age
+    t.sold_price / p.sqft AS sqft_price
 FROM property_features p, transactions t
 WHERE p.pin = t.pin
 ORDER by t.date DESC
@@ -96,11 +96,11 @@ SELECT
     p.*,
     a.str_no, a.street, a.st_type, a.unit_no, a.city, a.zip,
     t.sold_price, t.date,
-    EXTRACT(YEAR from t.date) - year_built AS sold_age
+    t.sold_price / p.sqft AS sqft_price
 FROM property_features p, transactions t, addresses a
 WHERE p.pin = t.pin AND p.pin = a.pin
 ORDER by t.date DESC
-
+;
 
 DROP VIEW IF EXISTS property_estimate;
 CREATE VIEW property_estimate AS
