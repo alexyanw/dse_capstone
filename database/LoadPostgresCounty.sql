@@ -9,8 +9,10 @@ CREATE TABLE county_transactions (
     address varchar(128)
 );
 
-COPY county_transactions FROM 'c:\wenyan\dse\w9yan\capstone\data\county\SalesData_AllYears_Distinct.txt'
+COPY county_transactions FROM 'c:\wenyan\dse_capstone\data\county\SalesData_AllYears_Distinct.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
+
+create index county_transaction_pin on county_transactions(pin);
 
 DROP TABLE IF EXISTS county_addresses;
 CREATE TABLE county_addresses (
@@ -24,7 +26,9 @@ CREATE TABLE county_addresses (
     zip varchar(10)
 );
 
-COPY county_addresses FROM 'c:\wenyan\dse\w9yan\capstone\data\county\Address.txt'
+create index county_addresses_pin on county_addresses(pin);
+
+COPY county_addresses FROM 'c:\wenyan\dse_capstone\data\county\Address.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 
 CREATE TABLE county_mpr (
@@ -35,7 +39,7 @@ CREATE TABLE county_mpr (
     improvement integer
 );
 
-COPY county_mpr FROM 'c:\wenyan\dse\w9yan\capstone\data\county\MPR_Recent.txt'
+COPY county_mpr FROM 'c:\wenyan\dse_capstone\data\county\MPR_Recent.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 
 DROP TABLE IF EXISTS county_properties CASCADE;
@@ -226,10 +230,33 @@ CREATE TABLE county_properties (
     par_end_record_flag_z                 varchar(1)
 );
 
-COPY county_properties FROM 'c:\wenyan\dse\w9yan\capstone\data\county\PARDATA_TAB.txt'
+COPY county_properties FROM 'c:\wenyan\dse_capstone\data\county\PARDATA_TAB.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 ;
 
 create index county_property_pin on county_properties(par_parcel_number);
-create index county_transaction_pin on county_transactions(pin);
-create index county_addresses_pin on county_addresses(pin);
+
+DROP TABLE IF EXISTS addresses_to_geocode;
+CREATE TABLE addresses_to_geocode(
+    addid serial PRIMARY KEY, 
+    address text,
+    new_address text,
+    lon numeric, 
+    lat numeric, 
+    streetno text,
+    streetname text,
+    streettype text,
+    city text,
+    state text,
+    zip text,
+    rating integer,
+    pin varchar(10),
+    status integer
+);
+
+COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\county\addresses_to_geocode.csv'
+    WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
+;
+
+create index addresses_to_geocode_pin on addresses_to_geocode(pin);
+
