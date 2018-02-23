@@ -24,6 +24,9 @@ def get_property_aggregation(pp, df, col, **kwargs):
     if 'feature' not in kwargs or 'group' not in kwargs or 'aggfunc' not in kwargs:
         print("Error: get_aggregation must specify feature,group,aggfunc in kwargs")
         exit(1)
+    if pp.df_property is None:
+        print("Warning: feature '{}' is missing due to preprocess doesn't have df_property".format(col))
+        return df
     feature = kwargs['feature']
     group = kwargs['group']
     aggfunc = kwargs['aggfunc']
@@ -123,7 +126,8 @@ class Preprocess:
         if kwargs.get('valid', False):
             df_ret = self.remove_invalid(df_ret)
 
-        return df_ret[feature_set]
+        feature_set_available = list(set(feature_set) & set(df_ret.columns))
+        return df_ret[feature_set_available]
 
     @classmethod
     def get_feature_list(cls, type='delivered'):
