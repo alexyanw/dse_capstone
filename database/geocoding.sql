@@ -22,6 +22,8 @@ where str_no is not null and str_no != '0' and street is not null
 -- select par_parcel_number, concat(str_no, ' ', substring(str_add, 1, length(str_add)-2), ', CA') FROM county_properties 
 ;
 
+CREATE INDEX addresses_to_geocode_pin on addresses_to_geocode(pin);
+
 UPDATE addresses_to_geocode a
 SET status=1
 FROM property_address_transactions p
@@ -29,7 +31,6 @@ WHERE p.pin = a.pin AND
   p.sold_price > 0 AND p.sqft < 10000
 ;
 
-CREATE INDEX addresses_to_geocode_pin on addresses_to_geocode(pin);
 
 UPDATE addresses_to_geocode
   SET  (rating, new_address, lon, lat, streetno, streetname, streettype, city, state,  zip)
@@ -56,3 +57,12 @@ FROM (
 ) As a
 LEFT JOIN LATERAL geocode(ROW(REGEXP_REPLACE((a.sa).house_num, '[^0-9]+', ''), (a.sa).predir, (a.sa).name,(a.sa).suftype, (a.sa).sufdir, (a.sa).unit , (a.sa).city, (a.sa).state, (a.sa).postcode, true)::norm_addy,1) As g ON true
 WHERE a.addid = addresses_to_geocode.addid;
+
+-- check the problematic geocoded address
+-- select g.status, a.pin, g.address, g.new_address, g.rating, g.lon, g.lat, a.str_no, g.streetno, a.city, g.city, a.zip, g.zip
+select count(1)
+from county_addresses a, addresses_to_geocode g
+where a.pin = g.pin 
+  and g.status != 0 
+  and (a.str_no != g.streetno or substring(a.zip, 1,5) != g.zip)
+-- limit 10
