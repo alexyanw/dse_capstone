@@ -47,6 +47,7 @@ class Preprocess:
         'sqft_zip_avg',
         'sqft_price_zip_avg',
         'sold_price_zip_avg',
+        'impr_over_land',
     ]
     features_underwork = [
         'date',
@@ -58,6 +59,8 @@ class Preprocess:
         'sold_price',
         'sale_count_zip',
         'prop_count_zip',
+        'eval_land',
+        'eval_imps',
     ]
     feature_transform = {
         'year_built': int,
@@ -66,6 +69,7 @@ class Preprocess:
         'date': lambda self,df,col: pd.to_datetime(df[col]),
         'sold_year': lambda self,df,col: pd.to_datetime(df['date']).dt.year,
         'sold_age': lambda self,df,col: pd.to_datetime(df['date']).dt.year - df['year_built'],
+        'impr_over_land': lambda self,df,col: df['eval_imps'] / df['eval_land'],
     }
     feature_engineer = {
         'sqft_zip_avg': partial(get_aggregation, feature='sqft', group='zip', aggfunc='mean'),

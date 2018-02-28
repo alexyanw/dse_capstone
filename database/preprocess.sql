@@ -35,7 +35,9 @@ SELECT
     par_bedrooms AS num_bed,
     par_bathroom/10 AS num_bath,
     par_pool AS pool,
-    par_view AS view
+    par_view AS view,
+    par_current_land AS eval_land,
+    par_current_imps AS eval_imps
 FROM properties
 WHERE properties.land_use_code = 1 AND properties.land_use_subcode >= 11 AND properties.land_use_subcode <= 17 
   AND properties.par_total_lvg_area > 0
