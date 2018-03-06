@@ -25,11 +25,9 @@ CREATE TABLE county_addresses (
     state varchar(8),
     zip varchar(10)
 );
-
-create index county_addresses_pin on county_addresses(pin);
-
 COPY county_addresses FROM 'c:\wenyan\dse_capstone\data\county\Address.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
+create index county_addresses_pin on county_addresses(pin);
 
 CREATE TABLE county_mpr (
     pin varchar(10),
