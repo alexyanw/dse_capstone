@@ -1,15 +1,19 @@
+import logging,pprint
 import pandas as pd
 import types
 from functools import partial
+from utils import *
 
 __all__ = ['Preprocess']
+
+logger = logging.getLogger('dp')
 
 def transform_YN(pp,df,col):
     return df[col].apply(lambda x: 1 if x=='Y' else 0)
 
 def get_aggregation(pp, df, col, **kwargs):
     if 'feature' not in kwargs or 'group' not in kwargs or 'aggfunc' not in kwargs:
-        print("Error: get_aggregation must specify feature,group,aggfunc in kwargs")
+        logger.error("Error: get_aggregation must specify feature,group,aggfunc in kwargs")
         exit(1)
     feature = kwargs['feature']
     group = kwargs['group']
@@ -22,10 +26,10 @@ def get_aggregation(pp, df, col, **kwargs):
 
 def get_property_aggregation(pp, df, col, **kwargs):
     if 'feature' not in kwargs or 'group' not in kwargs or 'aggfunc' not in kwargs:
-        print("Error: get_aggregation must specify feature,group,aggfunc in kwargs")
+        logger.error("get_aggregation must specify feature,group,aggfunc in kwargs")
         exit(1)
     if pp.df_property is None:
-        print("Warning: feature '{}' is missing due to preprocess doesn't have df_property".format(col))
+        logger.warning("feature '{}' is missing due to preprocess doesn't have df_property".format(col))
         return df
     feature = kwargs['feature']
     group = kwargs['group']
@@ -37,8 +41,10 @@ def get_property_aggregation(pp, df, col, **kwargs):
     return df_joined
 
 class Preprocess:
-    target = 'sqft_price'
+    target = 'sold_price'
     features_delivered = [
+        'date',
+        'sold_price',
         'sqft',
         'num_bed',
         'num_bath',
@@ -50,20 +56,21 @@ class Preprocess:
         'impr_over_land',
     ]
     features_underwork = [
-        'date',
+        'usable_sqft',
+        #'acre',
         'street',
         'zip',
         'year_built',
+        'sqft_price',
         'sold_year',
         'sold_age',
-        'sold_price',
         'sale_count_zip',
         'prop_count_zip',
         'eval_land',
         'eval_imps',
     ]
     feature_transform = {
-        'year_built': int,
+        #'year_built': int,
         'view': transform_YN,
         'pool': transform_YN,
         'date': lambda self,df,col: pd.to_datetime(df[col]),
@@ -81,7 +88,7 @@ class Preprocess:
     }
 
     valid_criterias = {
-        'sold_price': lambda df: df[df['sold_price']>0],
+        'sold_price': lambda df: df[(df['sold_price']>0)&(df['sold_price']<3000000)],
         'sqft_price': lambda df: df[(df['sqft_price']>0)&(df['sqft_price']<2000)],
         'sqft': lambda df: df[df['sqft']<10000],
         'num_bed': lambda df: df[df['num_bed']<10],
@@ -112,18 +119,21 @@ class Preprocess:
         eng_features = [f for f in feature_set_all if f in Preprocess.feature_engineer]
 
         for f in trans_features:
-            print('transforming', f)
+            logger.info('transforming {}'.format(f))
             func = Preprocess.feature_transform[f]
             if isinstance(func, types.FunctionType) or isinstance(func, partial):
                 df_ret[f] = func(self, df_ret, f)
+                if df_ret[f].dtype in ['float64', 'int64']:
+                    df_ret[f] = df_ret[f].fillna(df_ret[f].mean())
             else:
-                df_ret[f] = df_ret[f].fillna(0).astype(func)
+                #df_ret[f] = df_ret[f].fillna(0).astype(func)
+                df_ret[f] = df_ret[f].astype(func)
 
         if 'date' in kwargs:
             df_ret = self.filter_date(df_ret, kwargs['date'])
 
         for f in eng_features:
-            print('making', f)
+            logger.info('making {}'.format(f))
             func = Preprocess.feature_engineer[f]
             df_ret = func(self, df_ret, f)
 
@@ -157,6 +167,6 @@ class Preprocess:
 
     def filter_date(self, df, date_range):
         if len(date_range) != 2:
-            print("Error: date_range must be size of 2")
+            logger.error("date_range must be size of 2")
             exit(1)
         return df[(df['date'] >= date_range[0]) & (df['date'] < date_range[1])]

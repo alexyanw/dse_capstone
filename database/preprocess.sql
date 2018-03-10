@@ -10,6 +10,7 @@ SELECT
 		ELSE par_year_effective + 1900
 	END as par_year_effective,
     par_total_lvg_area,
+    par_acreage,
     par_bedrooms,
     par_bathroom,
     par_addition_area,
@@ -29,18 +30,22 @@ FROM county_properties
 DROP VIEW IF EXISTS property_features CASCADE;
 CREATE VIEW property_features AS
 SELECT 
-    par_parcel_number AS pin,
-	par_year_effective AS year_built,
-    par_total_lvg_area AS sqft,
-    par_bedrooms AS num_bed,
-    par_bathroom/10 AS num_bath,
-    par_pool AS pool,
-    par_view AS view,
-    par_current_land AS eval_land,
-    par_current_imps AS eval_imps
-FROM properties
-WHERE properties.land_use_code = 1 AND properties.land_use_subcode >= 11 AND properties.land_use_subcode <= 17 
-  AND properties.par_total_lvg_area > 0
+    p.par_parcel_number AS pin,
+    p.land_use_subcode,
+	y.year_built,
+    p.par_total_lvg_area AS sqft,
+    p.par_usable_sq_feet AS usable_sqft,
+    p.par_acreage AS acre,
+    p.par_bedrooms AS num_bed,
+    p.par_bathroom/10 AS num_bath,
+    p.par_pool AS pool,
+    p.par_view AS view,
+    p.par_current_land AS eval_land,
+    p.par_current_imps AS eval_imps
+FROM properties p, county_year_built y
+WHERE p.par_parcel_number = y.pin AND
+  p.land_use_code = 1 AND p.land_use_subcode >= 11 AND p.land_use_subcode <= 17 
+  AND p.par_total_lvg_area > 0
 ;
 
 DROP VIEW IF EXISTS transactions;
@@ -70,7 +75,7 @@ FROM county_addresses a
 DROP VIEW IF EXISTS property_addresses;
 CREATE VIEW property_addresses AS
 SELECT
-    a.pin,
+    f.*,
     a.str_no,
     a.street,
     a.st_type,
@@ -104,13 +109,3 @@ WHERE p.pin = t.pin AND p.pin = a.pin
 ORDER by t.date DESC
 ;
 
-DROP VIEW IF EXISTS property_estimate;
-CREATE VIEW property_estimate AS
-SELECT
-    p.*,
-    a.street, a.city, a.zip,
-    t.sold_price, t.date,
-    t.sold_price / p.sqft AS sqft_price
-FROM property_features p, transactions t, addresses a
-WHERE p.pin = t.pin AND p.pin = a.pin
-ORDER by t.date DESC
