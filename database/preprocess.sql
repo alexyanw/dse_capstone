@@ -100,12 +100,11 @@ ORDER by t.date DESC
 DROP VIEW IF EXISTS property_address_transactions;
 CREATE VIEW property_address_transactions AS
 SELECT
-    p.*,
-    a.str_no, a.street, a.st_type, a.unit_no, a.city, a.zip,
+    pa.*,
     t.sold_price, t.date,
-    t.sold_price / p.sqft AS sqft_price
-FROM property_features p, transactions t, addresses a
-WHERE p.pin = t.pin AND p.pin = a.pin
+    t.sold_price / pa.sqft AS sqft_price
+FROM property_addresses pa, transactions t
+WHERE pa.pin = t.pin
 ORDER by t.date DESC
 ;
 
