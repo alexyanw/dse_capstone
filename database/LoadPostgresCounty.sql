@@ -234,11 +234,10 @@ COPY county_properties FROM 'c:\wenyan\dse_capstone\data\county\PARDATA_TAB.txt'
 
 create index county_property_pin on county_properties(par_parcel_number);
 
-DROP TABLE IF EXISTS addresses_to_geocode;
+DROP TABLE IF EXISTS addresses_to_geocode CASCADE;
 CREATE TABLE addresses_to_geocode(
     addid serial PRIMARY KEY, 
     address text,
-    new_address text,
     lon numeric, 
     lat numeric, 
     streetno text,
@@ -247,12 +246,13 @@ CREATE TABLE addresses_to_geocode(
     city text,
     state text,
     zip text,
+    new_address text,
     rating integer,
     pin varchar(10),
     status integer
 );
 
-COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\county\addresses_to_geocode.csv'
+COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\addresses_to_geocode.csv'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 ;
 

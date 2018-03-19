@@ -2,6 +2,7 @@ import logging,pprint
 import pandas as pd
 import types
 from functools import partial
+from copy import copy
 from utils import *
 
 __all__ = ['Preprocess']
@@ -44,7 +45,6 @@ class Preprocess:
     target = 'sold_price'
     features_delivered = [
         'date',
-        'sold_price',
         'sqft',
         'num_bed',
         'num_bath',
@@ -54,12 +54,14 @@ class Preprocess:
         'sqft_price_zip_avg',
         'sold_price_zip_avg',
         'impr_over_land',
+        'lon',
+        'lat',
     ]
     features_underwork = [
+        'zip',
         'usable_sqft',
         #'acre',
         'street',
-        'zip',
         'year_built',
         'sqft_price',
         'sold_year',
@@ -93,6 +95,7 @@ class Preprocess:
         'sqft': lambda df: df[df['sqft']<10000],
         'num_bed': lambda df: df[df['num_bed']<10],
         'num_bath': lambda df: df[df['num_bath']<10],
+        'lon': lambda df: df[df['lon'].notnull()],
     }
 
     def __init__(self, df_transaction=None, df_property=None, **kwargs):
@@ -146,9 +149,9 @@ class Preprocess:
     @classmethod
     def get_feature_list(cls, type='delivered'):
         if type == 'delivered':
-            return Preprocess.features_delivered
+            return copy(Preprocess.features_delivered)
         elif type == 'underwork':
-            return Preprocess.features_underwork
+            return copy(Preprocess.features_underwork)
         else:
             return Preprocess.features_delivered + Preprocess.features_underwork
 

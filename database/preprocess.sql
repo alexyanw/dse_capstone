@@ -61,15 +61,26 @@ WHERE code != 'M'
 
 DROP VIEW IF EXISTS addresses CASCADE;
 CREATE VIEW addresses AS
-SELECT
+SELECT 
     a.pin,
     a.str_no,
     a.street,
     a.st_type,
     a.unit_no,
     a.city,
-    substring(a.zip, 1,5) zip
-FROM county_addresses a
+    substring(a.zip, 1,5) zip,
+    CASE
+      WHEN substring(a.zip, 1, 5) = g.zip THEN g.lon
+      ELSE NULL
+    END AS lon,
+    CASE
+      WHEN substring(a.zip, 1, 5) = g.zip THEN g.lat
+      ELSE NULL
+    END AS lat
+FROM county_addresses a LEFT OUTER JOIN 
+  (SELECT * FROM addresses_to_geocode ag
+   WHERE ag.rating < 20 AND ag.lon>-118 AND ag.lon<-116) g
+ON a.pin = g.pin
 ;
 
 DROP VIEW IF EXISTS property_addresses;
@@ -81,7 +92,8 @@ SELECT
     a.st_type,
     a.unit_no,
     a.city,
-    a.zip
+    a.zip,
+    a.lon, a.lat
 FROM addresses a, property_features f
 WHERE a.pin = f.pin
 ;
