@@ -64,11 +64,12 @@ def plot_curve(df, x_col, y_col):
     plt.ylabel(y_col)
     plt.show()
 
-def plot_trends(df, columns, title=None):
+def plot_trends(df, columns, **kwargs):
     fig, ax = plt.subplots(figsize=(18,12))
     for col in columns:
         df[col].plot(ax=ax, kind='line', label=col)
     plt.legend(loc='best')
+    title = kwargs.get('title', None)
     if not title:
         title = "trend over " + df.index.name
     plt.title(title)

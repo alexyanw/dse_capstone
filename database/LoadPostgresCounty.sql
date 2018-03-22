@@ -234,6 +234,15 @@ COPY county_properties FROM 'c:\wenyan\dse_capstone\data\county\PARDATA_TAB.txt'
 
 create index county_property_pin on county_properties(par_parcel_number);
 
+DROP TABLE IF EXISTS county_year_built;
+CREATE TABLE county_year_built (
+    pin varchar(10),
+    effective_year integer,
+    year_built integer
+);
+COPY county_year_built FROM 'c:\wenyan\dse_capstone\data\county\YearBuiltALL.csv'
+WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
+
 DROP TABLE IF EXISTS addresses_to_geocode CASCADE;
 CREATE TABLE addresses_to_geocode(
     addid serial PRIMARY KEY, 

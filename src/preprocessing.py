@@ -114,6 +114,8 @@ class Preprocess:
         feature_set = feature_set_all
         if kwargs.get('feature', 'all') == 'delivered':
             feature_set = Preprocess.features_delivered + [Preprocess.target]
+        if kwargs.get('feature_set', None) is not None:
+            feature_set = list(set(kwargs['feature_set'] + [Preprocess.target]))
 
         exist_columns = list(set(self.df_transaction.columns) & set(feature_set_all))
         df_ret = self.df_transaction[exist_columns].copy(deep=True)
@@ -141,7 +143,7 @@ class Preprocess:
             df_ret = func(self, df_ret, f)
 
         if kwargs.get('valid', False):
-            df_ret = self.remove_invalid(df_ret)
+            df_ret = self.remove_invalid(df_ret, feature_set)
 
         feature_set_available = list(set(feature_set) & set(df_ret.columns))
         return df_ret[feature_set_available]
@@ -162,9 +164,10 @@ class Preprocess:
         valid_counts['total'] = self.df_transaction.shape[0]
         return valid_counts
 
-    def remove_invalid(self, df):
+    def remove_invalid(self, df, features):
         df_ret = df
         for f,func in Preprocess.valid_criterias.items():
+            if f not in features: continue
             df_ret = func(df_ret)
         return df_ret
 
