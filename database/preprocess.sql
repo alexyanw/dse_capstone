@@ -106,7 +106,7 @@ SELECT
     t.sold_price / p.sqft AS sqft_price
 FROM property_features p, transactions t
 WHERE p.pin = t.pin
-ORDER by t.date DESC
+ORDER by t.date
 ;
 
 DROP VIEW IF EXISTS property_address_transactions;
@@ -117,6 +117,6 @@ SELECT
     t.sold_price / pa.sqft AS sqft_price
 FROM property_addresses pa, transactions t
 WHERE pa.pin = t.pin
-ORDER by t.date DESC
+ORDER by t.date
 ;
 

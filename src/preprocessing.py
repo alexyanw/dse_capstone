@@ -146,7 +146,7 @@ class Preprocess:
             df_ret = self.remove_invalid(df_ret, feature_set)
 
         feature_set_available = list(set(feature_set) & set(df_ret.columns))
-        return df_ret[feature_set_available]
+        return df_ret.sort_values('date')[feature_set_available]
 
     @classmethod
     def get_feature_list(cls, type='delivered'):

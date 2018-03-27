@@ -1,5 +1,7 @@
 # dse_capstone
 ## python modules need be installed
+* conda install sqlalchemy psycopg2
+* conda install -c anaconda seaborn
 * pip install python-dotenv
 * pip install bayesian-optimization
 
