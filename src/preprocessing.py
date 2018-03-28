@@ -108,14 +108,16 @@ class Preprocess:
             prop_view = kwargs.get('property', 'property_addresses')
             self.df_transaction = ds.get_view_df(tran_view)
             self.df_property = ds.get_view_df(prop_view)
+        self.df_transaction['id'] = df_transaction.index
 
     def dataset(self, **kwargs):
-        feature_set_all = Preprocess.features_delivered + Preprocess.features_underwork + [Preprocess.target]
+        feature_set_all = Preprocess.features_delivered + Preprocess.features_underwork + [Preprocess.target] + ['id']
         feature_set = feature_set_all
         if kwargs.get('feature', 'all') == 'delivered':
             feature_set = Preprocess.features_delivered + [Preprocess.target]
         if kwargs.get('feature_set', None) is not None:
             feature_set = list(set(kwargs['feature_set'] + [Preprocess.target]))
+        feature_set += ['id']
 
         exist_columns = list(set(self.df_transaction.columns) & set(feature_set_all))
         df_ret = self.df_transaction[exist_columns].copy(deep=True)
@@ -176,3 +178,9 @@ class Preprocess:
             logger.error("date_range must be size of 2")
             exit(1)
         return df[(df['date'] >= date_range[0]) & (df['date'] < date_range[1])]
+
+    def debug(self, df_check):
+        cols_to_use = list(self.df_transaction.columns.difference(df_check.columns)) + ['id']
+        df_check = df_check.merge(self.df_transaction[cols_to_use], on='id')
+        debug_columns = ['str_no', 'street', 'st_type', 'city', 'zip', 'lon', 'lat', 'sqft', 'sold_price', 'predict', 'residual', 'date', 'pin', 'land_use_subcode']
+        return df_check[debug_columns]

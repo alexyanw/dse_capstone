@@ -21,11 +21,22 @@ class ModelType(Enum):
     GRID_SEARCH = 3
     BAYESIAN = 4
 
+def remeasure(df_check, threshold=200000):
+    removed = df_check[df_check['residual']>=threshold]
+    print("removed records:", removed.shape[0])
+    df_left = df_check[df_check['residual']<threshold]
+    return sqrt(mean_squared_error(df_left['predict'], df_left['sold_price']))
+
+def get_valid_columns(df):
+    extra_columns = ['id', 'date']
+    return df[list(set(df.columns) - set(extra_columns))]
+
 class ModelManager:
     def __init__(self, df, features, model, **kwargs):
         target = kwargs.get('target', 'sold_price')
         self.feature_set = features
-        self.X = df[features]
+        self.df = df.copy(deep=True)
+        self.X = df[features+['id']]
         self.y = np.ravel(df[target])
         self.model = model
         self.modeldb = kwargs.get('modeldb', False)
@@ -124,8 +135,8 @@ class ModelManager:
                 for values in itertools.product(*param_grid.values()):
                     param_values = dict(zip(params, values))
                     estimator = self.model(**param_values)
-                    estimator.fit(self.X_train, self.y_train)
-                    y_pred = estimator.predict(self.X_val)
+                    estimator.fit(get_valid_columns(self.X_train), self.y_train)
+                    y_pred = estimator.predict(get_valid_columns(self.X_val))
                     score = self.measure_metrics(self.y_val, y_pred)
                     scores.append({**param_values, 'score': score})
 
@@ -138,17 +149,19 @@ class ModelManager:
 
     def train_and_predict(self):
         if self.time_series:
-            self.model.fit(self.X_train_val[-self.sliding_window:], self.y_train_val[-self.sliding_window:])
+            train = get_valid_columns(self.X_train_val[-self.sliding_window:])
+            self.model.fit(train, self.y_train_val[-self.sliding_window:])
         else:
-            self.model.fit(self.X_train_val, self.y_train_val)
+            train = get_valid_columns(self.X_train_val)
+            self.model.fit(train, self.y_train_val)
 
-        y = self.model.predict(self.X_train_val)
+        y = self.model.predict(get_valid_columns(self.X_train_val))
         self.train_error = self.measure_metrics(y, self.y_train_val)
 
         if self.modeldb:
-            self.y_predict = self.model.predict_sync(self.X_test)
+            self.y_predict = self.model.predict_sync(get_valid_columns(self.X_test))
         else:
-            self.y_predict = self.model.predict(self.X_test)
+            self.y_predict = self.model.predict(get_valid_columns(self.X_test))
         self.residual = self.y_predict - self.y_test
         self.test_error = self.measure_metrics(self.y_predict, self.y_test)
 
@@ -187,6 +200,17 @@ class ModelManager:
             return self.model.best_estimator_
         else:
             return self.model
+
+    def get_result_df(self, pp=None):
+        df_check = self.X_test.copy(deep=True)
+        df_check['sold_price'] = self.y_test
+        df_check['predict'] = self.y_predict
+        df_check['residual'] = self.residual
+
+        if pp != None:
+            cols_to_use = list(pp.df_transaction.columns.difference(df_check.columns)) + ['id']
+            return df_check.merge(pp.df_transaction[cols_to_use], on='id')
+        return df_check
 
     def plot_feature_importance(self, **kwargs):
         if not self.check_predicted(): return
