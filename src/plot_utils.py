@@ -7,10 +7,18 @@ def plot_bar(hash, title='', ylabel='value'):
     ticks = hash.keys()
     values = hash.values()
     y_pos = np.arange(len(ticks))
-    plt.bar(y_pos, values, align='center')
-    plt.xticks(y_pos, ticks)
-    plt.ylabel(ylabel)
-    plt.title(title)
+
+    fig, ax = plt.subplots(figsize=(12,6))
+    rects = ax.bar(y_pos, values, align='center')
+    ax.set_xticks(y_pos)
+    ax.set_xticklabels(ticks, rotation='vertical')
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+    total = max(values)
+    for i, v in enumerate(values):
+        rect = rects[i]
+        ax.text(rect.get_x() + rect.get_width()/2., 0.25 + rect.get_height(), "{:.2f}%".format(100*v/total), ha='center', va='bottom')
     plt.show()
 
 def plot_feature_histogram(df, columns=None, title='histogram per feature'):

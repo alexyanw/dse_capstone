@@ -234,7 +234,7 @@ class ModelManager:
         plt.xlabel('Actual')
         plt.ylabel('Prediction')
         plt.legend(loc='upper left');
-        plt.title('Predication vs Actual')
+        plt.title('Prediction vs Actual')
 
         ax2 = fig.add_subplot(122)
         ax2.scatter(self.y_test, self.residual, s=10, c='r', alpha=0.2, marker="s", label=self.model_name)

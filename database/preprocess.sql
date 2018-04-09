@@ -68,6 +68,8 @@ SELECT
     a.st_type,
     a.unit_no,
     a.city,
+    g.address,
+    g.new_address,
     substring(a.zip, 1,5) zip,
     CASE
       WHEN substring(a.zip, 1, 5) = g.zip THEN g.lon
@@ -83,8 +85,8 @@ FROM county_addresses a LEFT OUTER JOIN
 ON a.pin = g.pin
 ;
 
-DROP VIEW IF EXISTS property_addresses;
-CREATE VIEW property_addresses AS
+DROP VIEW IF EXISTS property_addresses CASCADE;
+CREATE MATERIALIZED VIEW property_addresses AS
 SELECT
     f.*,
     a.str_no,
@@ -93,6 +95,8 @@ SELECT
     a.unit_no,
     a.city,
     a.zip,
+    a.address,
+    a.new_address,
     a.lon, a.lat
 FROM addresses a, property_features f
 WHERE a.pin = f.pin
