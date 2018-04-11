@@ -1,5 +1,6 @@
 import logging,pprint
 import pandas as pd
+import numpy as np
 import types
 from functools import partial
 from copy import copy
@@ -42,7 +43,6 @@ def get_property_aggregation(pp, df, col, **kwargs):
     return df_joined
 
 class Preprocess:
-    target = 'sold_price'
     features_delivered = [
         'date',
         'sqft',
@@ -56,6 +56,7 @@ class Preprocess:
         'impr_over_land',
         'lon',
         'lat',
+        'zip',
     ]
     features_underwork = [
         'zip',
@@ -63,6 +64,7 @@ class Preprocess:
         #'acre',
         'street',
         'year_built',
+        'sold_price',
         'sqft_price',
         'sold_year',
         'sold_age',
@@ -96,11 +98,15 @@ class Preprocess:
         'num_bed': lambda df: df[df['num_bed']<10],
         'num_bath': lambda df: df[df['num_bath']<10],
         'lon': lambda df: df[df['lon'].notnull()],
+       #'view': lambda df: df[df['view'].notnull()],
+       #'pool': lambda df: df[df['pool'].notnull()],
+       #'year_built': lambda df: df[df['year_built'].notnull()],
     }
 
     def __init__(self, df_transaction=None, df_property=None, **kwargs):
         self.df_transaction = df_transaction
         self.df_property = df_property
+        self.target = kwargs.get('target', 'sold_price')
 
         if 'source' in kwargs:
             ds = kwargs['source']
@@ -111,12 +117,12 @@ class Preprocess:
         self.df_transaction['id'] = df_transaction.index
 
     def dataset(self, **kwargs):
-        feature_set_all = Preprocess.features_delivered + Preprocess.features_underwork + [Preprocess.target] + ['id']
+        feature_set_all = Preprocess.features_delivered + Preprocess.features_underwork + [self.target] + ['id']
         feature_set = feature_set_all
         if kwargs.get('feature', 'all') == 'delivered':
-            feature_set = Preprocess.features_delivered + [Preprocess.target]
+            feature_set = Preprocess.features_delivered + [self.target]
         if kwargs.get('feature_set', None) is not None:
-            feature_set = list(set(kwargs['feature_set'] + [Preprocess.target]))
+            feature_set = list(set(kwargs['feature_set'] + [self.target]))
         feature_set += ['id']
 
         exist_columns = list(set(self.df_transaction.columns) & set(feature_set_all))
@@ -147,6 +153,9 @@ class Preprocess:
         if kwargs.get('valid', False):
             df_ret = self.remove_invalid(df_ret, feature_set)
 
+        if kwargs.get('clean', False):
+            df_ret = self.remove_outlier(df_ret)
+
         feature_set_available = list(set(feature_set) & set(df_ret.columns))
         return df_ret.sort_values('date')[feature_set_available]
 
@@ -169,9 +178,33 @@ class Preprocess:
     def remove_invalid(self, df, features):
         df_ret = df
         for f,func in Preprocess.valid_criterias.items():
-            if f not in features: continue
+            #if f not in features: continue
+            logger.debug("cleaning on criteria: {}".format(f))
             df_ret = func(df_ret)
         return df_ret
+
+    def remove_outlier(self, df, column='sqft_price'):
+        q75, q25 = np.percentile(df[column], [75 ,25])
+        iqr = q75 - q25
+        county_min = q25 - (iqr*.5)
+        county_max = q75 + (iqr*.5)
+
+        dfs = []
+        zips = df['zip'].unique()
+        for zip in zips:
+            df_zip = df[df['zip']==zip]
+            q75, q25 = np.percentile(df_zip[column], [75 ,25])
+            iqr = q75 - q25
+            zip_min = q25 - (iqr*.5)
+            zip_max = q75 + (iqr*.5)
+            if df_zip.shape[0] < 100:
+                zip_min = county_min
+                zip_max = county_max
+            dfs.append(df_zip[(df_zip[column]>zip_min)&(df_zip[column]<zip_max)])
+
+        return pd.concat(dfs)
+
+        return None
 
     def filter_date(self, df, date_range):
         if len(date_range) != 2:
@@ -181,6 +214,6 @@ class Preprocess:
 
     def debug(self, df_check):
         cols_to_use = list(self.df_transaction.columns.difference(df_check.columns)) + ['id']
-        df_check = df_check.merge(self.df_transaction[cols_to_use], on='id')
-        debug_columns = ['str_no', 'street', 'st_type', 'city', 'zip', 'lon', 'lat', 'sqft', 'sold_price', 'predict', 'residual', 'date', 'pin', 'land_use_subcode']
-        return df_check[debug_columns]
+        df_ret = df_check.merge(self.df_transaction[cols_to_use], on='id')
+        debug_columns = ['pin', 'str_no', 'street', 'st_type', 'city', 'zip', 'land_use_subcode'] + list(df_check.columns)
+        return df_ret[debug_columns]

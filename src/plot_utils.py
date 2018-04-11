@@ -141,6 +141,16 @@ def plot_violin(df, x, y, order=None, title=None):
     plt.title(title)
     plt.show()
 
+def plot_box(df, x, y, order=None, title=None):
+    plt.figure(figsize=(18,8))
+    sns.boxplot(x=x, y=y, data=df, order=order)
+    plt.xlabel(x, fontsize=15, rotation='vertical')
+    plt.xticks(rotation=90)
+    plt.ylabel(y, fontsize=15)
+    if not title: title = "boxplot of {} per {}".format(y, x)
+    plt.title(title)
+    plt.show()
+
 def plot_missing(df):
     df_missing = df.isnull().sum(axis=0).reset_index()
     df_missing.columns = ['column_name', 'missing_count']

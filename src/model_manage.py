@@ -33,11 +33,11 @@ def get_valid_columns(df):
 
 class ModelManager:
     def __init__(self, df, features, model, **kwargs):
-        target = kwargs.get('target', 'sold_price')
+        self.target = kwargs.get('target', 'sold_price')
         self.feature_set = features
         self.df = df.copy(deep=True)
         self.X = df[features+['id']]
-        self.y = np.ravel(df[target])
+        self.y = np.ravel(df[self.target])
         self.model = model
         self.modeldb = kwargs.get('modeldb', False)
         self.metrics = kwargs.get('metrics', lambda y_act,y_pred: sqrt(mean_squared_error(y_act, y_pred)))
@@ -203,7 +203,7 @@ class ModelManager:
 
     def get_result_df(self, pp=None):
         df_check = self.X_test.copy(deep=True)
-        df_check['sold_price'] = self.y_test
+        df_check[self.target] = self.y_test
         df_check['predict'] = self.y_predict
         df_check['residual'] = self.residual
 
