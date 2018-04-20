@@ -54,6 +54,15 @@ class Preprocess:
         'sqft_price_zip_avg',
         'sold_price_zip_avg',
         'impr_over_land',
+        'min_elem_distance',
+        'min_middle_distance',
+        'min_high_distance',
+        'elem_rating',
+        'middle_rating',
+        'high_rating',
+        'avg_elem_rating',
+        'avg_middle_rating',
+        'avg_high_rating',
         'lon',
         'lat',
         'zip',
@@ -69,7 +78,7 @@ class Preprocess:
         'sold_year',
         'sold_age',
         'sale_count_zip',
-        'prop_count_zip',
+        #'prop_count_zip',
         'eval_land',
         'eval_imps',
     ]
@@ -83,6 +92,8 @@ class Preprocess:
         'impr_over_land': lambda self,df,col: df['eval_imps'] / df['eval_land'],
     }
     feature_engineer = {
+        'sqft_price_zip_median': partial(get_aggregation, feature='sqft_price', group='zip', aggfunc='median'),
+        'sold_price_zip_median': partial(get_aggregation, feature='sold_price', group='zip', aggfunc='median'),
         'sqft_zip_avg': partial(get_aggregation, feature='sqft', group='zip', aggfunc='mean'),
         'sqft_price_zip_avg': partial(get_aggregation, feature='sqft_price', group='zip', aggfunc='mean'),
         'sold_price_zip_avg': partial(get_aggregation, feature='sold_price', group='zip', aggfunc='mean'),
@@ -183,28 +194,41 @@ class Preprocess:
             df_ret = func(df_ret)
         return df_ret
 
-    def remove_outlier(self, df, column='sqft_price'):
-        q75, q25 = np.percentile(df[column], [75 ,25])
-        iqr = q75 - q25
-        county_min = q25 - (iqr*.5)
-        county_max = q75 + (iqr*.5)
-
-        dfs = []
+    def remove_outlier(self, df, upper=1.5, lower=1.5, column='sqft_price'):
+        limits = self.get_zip_stats(df, upper=upper, lower=lower, column=column)
         zips = df['zip'].unique()
-        for zip in zips:
+        dfs = []
+        for stat in limits:
+            zip = stat['zip']
             df_zip = df[df['zip']==zip]
-            q75, q25 = np.percentile(df_zip[column], [75 ,25])
-            iqr = q75 - q25
-            zip_min = q25 - (iqr*.5)
-            zip_max = q75 + (iqr*.5)
-            if df_zip.shape[0] < 100:
-                zip_min = county_min
-                zip_max = county_max
-            dfs.append(df_zip[(df_zip[column]>zip_min)&(df_zip[column]<zip_max)])
+            lower  = stat['lower']
+            upper = stat['upper']
+            dfs.append(df_zip[(df_zip[column]>lower)&(df_zip[column]<upper)])
 
         return pd.concat(dfs)
 
-        return None
+    def get_zip_stats(self, df, column='sqft_price', upper=1.5, lower=1.5):
+        q75, q25 = np.percentile(df[column], [75 ,25])
+        iqr = q75 - q25
+        county_min = q25 - (iqr*upper)
+        county_max = q75 + (iqr*lower)
+
+        stats = []
+        zips = df['zip'].unique()
+        for zip in zips:
+            df_zip = df[df['zip']==zip]
+            mean = df_zip[column].mean()
+            std = df_zip[column].std()
+            median = df_zip[column].median()
+            q75, q25 = np.percentile(df_zip[column], [75 ,25])
+            iqr = q75 - q25
+            zip_min = q25 - (iqr*upper)
+            zip_max = q75 + (iqr*lower)
+           #if df_zip.shape[0] < 100:
+           #    zip_min = county_min
+           #    zip_max = county_max
+            stats.append({'zip': zip, 'lower':zip_min, 'upper':zip_max, 'iqr':iqr, 'mean':mean, 'std':std, 'median':median, 'count':df_zip.shape[0]})
+        return stats
 
     def filter_date(self, df, date_range):
         if len(date_range) != 2:

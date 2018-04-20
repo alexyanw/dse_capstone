@@ -3,19 +3,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-def plot_bar(hash, title='', ylabel='value'):
-    ticks = hash.keys()
-    values = hash.values()
-    y_pos = np.arange(len(ticks))
+def plot_bar(data, title='', ylabel='value', ascending=None, total=None, column=None):
+    ticks = []
+    values = []
+    if isinstance(data, dict):
+        ticks = data.keys()
+        values = data.values()
+    elif isinstance(data, pd.core.series.Series):
+        if ascending is not None: data = data.sort_values(ascending=ascending)
+        ticks = list(data.index)
+        values = list(data.values)
+    elif isinstance(data, pd.core.frame.DataFrame):
+        if ascending is not None: data = data.sort_values(by=column)
+        ticks = list(data.index)
+        values = list(data[column])
 
-    fig, ax = plt.subplots(figsize=(12,6))
-    rects = ax.bar(y_pos, values, align='center')
-    ax.set_xticks(y_pos)
+    x_pos = np.arange(len(ticks))
+
+    fig, ax = plt.subplots(figsize=(18,8))
+    rects = ax.bar(x_pos, values, align='center')
+    ax.set_xticks(x_pos)
     ax.set_xticklabels(ticks, rotation='vertical')
     ax.set_ylabel(ylabel)
     ax.set_title(title)
 
-    total = max(values)
+    if not total: total = max(values)
     for i, v in enumerate(values):
         rect = rects[i]
         ax.text(rect.get_x() + rect.get_width()/2., 0.25 + rect.get_height(), "{:.2f}%".format(100*v/total), ha='center', va='bottom')
@@ -143,7 +155,10 @@ def plot_violin(df, x, y, order=None, title=None):
 
 def plot_box(df, x, y, order=None, title=None):
     plt.figure(figsize=(18,8))
-    sns.boxplot(x=x, y=y, data=df, order=order)
+    ordered_columns = None
+    if order:
+        ordered_columns = list(df.groupby(x)[y].agg('median').sort_values().index)
+    sns.boxplot(x=x, y=y, data=df, order=ordered_columns)
     plt.xlabel(x, fontsize=15, rotation='vertical')
     plt.xticks(rotation=90)
     plt.ylabel(y, fontsize=15)

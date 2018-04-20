@@ -214,7 +214,8 @@ class ModelManager:
 
     def plot_feature_importance(self, **kwargs):
         if not self.check_predicted(): return
-        features = kwargs.get('feature_set', self.feature_set)
+        #features = kwargs.get('feature_set', self.feature_set)
+        features = list(get_valid_columns(self.X_test).columns)
         best_model = self.get_best_model()
         if not hasattr(best_model, 'feature_importances_'):
             logger.warn("{} has no feature_importances_".format(self.model_name))

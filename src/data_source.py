@@ -18,6 +18,7 @@ class DataSource:
         'property_addresses',
         'property_address_transactions',
         'property_transaction_valid',
+        'property_address_school_transactions',
     ]
 
     @classmethod
