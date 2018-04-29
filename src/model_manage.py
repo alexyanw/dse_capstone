@@ -36,8 +36,8 @@ class ModelManager:
         self.target = kwargs.get('target', 'sold_price')
         self.feature_set = features
         self.df = df.copy(deep=True)
-        self.X = df[features+['id']]
-        self.y = np.ravel(df[self.target])
+        self.X = self.df[features+['id']]
+        self.y = np.ravel(self.df[self.target])
         self.model = model
         self.modeldb = kwargs.get('modeldb', False)
         self.metrics = kwargs.get('metrics', lambda y_act,y_pred: sqrt(mean_squared_error(y_act, y_pred)))
@@ -106,7 +106,7 @@ class ModelManager:
     def validate(self, **kwargs):
         param_grid = kwargs.get('param_grid', None)
         if param_grid == None:
-            logger.info("validation step is skipped")
+            logger.debug("validation step is skipped")
             return
 
         if 'GridSearchCV' in kwargs:
