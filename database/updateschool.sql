@@ -9,8 +9,7 @@ update sandag_schools set school = 'Mount Vernon Elementary' where school = 'Mt.
 update sandag_schools set street = '3510 Newton Avenu' where school = 'Emerson/Bandini Elementary;
 -- run once done
 
-DROP MATERIALIZED VIEW IF EXISTS schools CASCADE;
-CREATE MATERIALIZED VIEW schools AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS schools AS
 WITH school_grade AS (
   SELECT *,substring(gsoffered from '^[^-]*') as grade_start, substring(gsoffered from '[^-]*$') as grade_end
   FROM sandag_schools
@@ -54,8 +53,7 @@ AND (g.name ILIKE '%' || s.name || '%'
     )
 ;
 
-DROP VIEW IF EXISTS school_feature CASCADE;
-CREATE VIEW school_feature AS
+CREATE VIEW IF NOT EXISTS school_feature AS
 with school_elem_rating_zip_avg AS (
   select zip,avg(rating) as rating from schools
   where soctype != 'Private' and rating is not null and elementary=true
@@ -85,16 +83,14 @@ from schools s
 WHERE s.soctype != 'Private'
 ;
 
-DROP MATERIALIZED VIEW IF EXISTS property_school_distance CASCADE;
-CREATE MATERIALIZED VIEW property_school_distance AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS property_school_distance AS
 SELECT p.pin, s.id as school_id, ST_Distance_Sphere(ST_GeomFromText('POINT(' || p.lon || ' ' || p.lat || ')', 4326), s.wkb_geometry) AS distance
 FROM property_addresses p, school_feature s
 WHERE p.zip = s.zip::text
   AND p.lon is not null
 ;
 
-DROP materialized VIEW IF EXISTS property_school_elementary CASCADE;
-CREATE materialized VIEW property_school_elementary AS
+CREATE materialized VIEW IF NOT EXISTS property_school_elementary AS
 WITH property_elementary_distance AS (
     SELECT d.pin,d.school_id,d.distance,s.rating_valid
     FROM property_school_distance d, school_feature s
@@ -106,8 +102,7 @@ FROM (SELECT *,ROW_NUMBER() OVER (partition BY pin ORDER BY distance) AS rnum
 WHERE p.rnum < 4
 ;
 
-DROP materialized VIEW IF EXISTS property_school_middle CASCADE;
-CREATE materialized VIEW property_school_middle AS
+CREATE materialized VIEW IF NOT EXISTS property_school_middle AS
 WITH property_middle_distance AS (
     SELECT d.pin,d.school_id,d.distance,s.rating_valid
     FROM property_school_distance d, school_feature s
@@ -119,8 +114,7 @@ FROM (SELECT *,ROW_NUMBER() OVER (partition BY pin ORDER BY distance) AS rnum
 WHERE p.rnum < 4
 ;
 
-DROP materialized VIEW IF EXISTS property_school_high CASCADE;
-CREATE materialized VIEW property_school_high AS
+CREATE materialized VIEW IF NOT EXISTS property_school_high AS
 WITH property_high_distance AS (
     SELECT d.pin,d.school_id,d.distance, s.rating_valid
     FROM property_school_distance d, school_feature s
@@ -132,8 +126,7 @@ FROM (SELECT *,ROW_NUMBER() OVER (partition BY pin ORDER BY distance) AS rnum
 WHERE p.rnum < 4
 ;
 
-DROP VIEW IF EXISTS property_closest_schools CASCADE;
-CREATE VIEW property_closest_schools AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS property_closest_schools AS
 SELECT 
   CASE
     WHEN e.pin is not null THEN e.pin
@@ -149,8 +142,7 @@ FROM property_school_elementary e
 WHERE (e.rnum=1 or e.rnum is null) AND (m.rnum=1 or m.rnum is null) AND (h.rnum=1 or h.rnum is null)
 ;
 
-DROP MATERIALIZED VIEW IF EXISTS property_address_schools CASCADE;
-CREATE MATERIALIZED View property_address_schools AS
+CREATE MATERIALIZED View IF NOT EXISTS property_address_schools AS
 WITH property_elementary AS (
     select pin, avg(rating) as avg_rating, avg(distance) as avg_distance
     from property_school_elementary
@@ -179,8 +171,7 @@ FROM property_addresses pa
   LEFT OUTER JOIN property_high ph ON pa.pin=ph.pin
 ;
 
-DROP VIEW IF EXISTS property_address_school_transactions CASCADE; 
-CREATE VIEW property_address_school_transactions AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS property_address_school_transactions AS
 SELECT
     p.*,
     t.sold_price, t.date,

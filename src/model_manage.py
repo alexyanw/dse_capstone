@@ -2,6 +2,7 @@ import logging,pprint
 from enum import Enum
 import pandas as pd
 import numpy as np
+import itertools
 from utils import *
 from plot_utils import *
 
@@ -31,13 +32,21 @@ def get_valid_columns(df):
     extra_columns = ['id', 'date']
     return df[list(set(df.columns) - set(extra_columns))]
 
+
+def walk_forward_split(n_folds, test_window, sliding):
+    splits = []
+    m = 0
+    for i in range(n_folds):
+        start = i*test_window
+        train = np.array(range(start, start+sliding))
+        test = np.array(range(start+sliding, start+sliding+test_window))
+        splits.append([train, test])
+    return splits
+
 class ModelManager:
     def __init__(self, df, features, model, **kwargs):
         self.target = kwargs.get('target', 'sold_price')
         self.feature_set = features
-        self.df = df.copy(deep=True)
-        self.X = self.df[features+['id']]
-        self.y = np.ravel(self.df[self.target])
         self.model = model
         self.modeldb = kwargs.get('modeldb', False)
         self.metrics = kwargs.get('metrics', lambda y_act,y_pred: sqrt(mean_squared_error(y_act, y_pred)))
@@ -55,6 +64,13 @@ class ModelManager:
         if self.modeldb:
             self._init_modeldb(**self.modeldb)
 
+        if df is not None: self.set_data(df)
+
+    def set_data(self, df):
+        self.df = df.copy(deep=True)
+        self.X = self.df[self.feature_set+['id']]
+        self.y = np.ravel(self.df[self.target])
+
     def _init_modeldb(self, **kwargs):
         name = kwargs.get('name', "house sold_price estimate")
         author = kwargs.get('author', 'wenyan')
@@ -67,7 +83,12 @@ class ModelManager:
     def split(self, **kwargs):
         X_train_val, X_train, X_test, y_train_val, y_train, y_test = None, None, None, None, None, None
         test_size = kwargs.get('test_size', 0.2)
-        if type(test_size) is float:
+        if kwargs.get('size_in_month', False):
+            test_start_date = self.X['date'].max() - pd.tseries.offsets.DateOffset(months=test_size)
+            test_size_in_sample = self.X[self.X['date'] > test_start_date].shape[0]
+            X_train_val, X_test = self.X[:-test_size_in_sample], self.X[-test_size_in_sample:]
+            y_train_val, y_test = self.y[:-test_size_in_sample], self.y[-test_size_in_sample:]
+        elif type(test_size) is float:
             split_index = int(self.X.shape[0] * (1-test_size))
             X_train_val, X_test = self.X[:split_index], self.X[split_index:]
             y_train_val, y_test = self.y[:split_index], self.y[split_index:]
@@ -75,24 +96,38 @@ class ModelManager:
             X_train_val, X_test = self.X[:-test_size], self.X[-test_size:]
             y_train_val, y_test = self.y[:-test_size], self.y[-test_size:]
 
-
-        valid_size = kwargs.get('valid_size', 0.2)
         if self.time_series:
-            if type(valid_size) is float:
-                split_index = int(X_train_val.shape[0] * (1-valid_size))
-                X_train, X_val = X_train_val[:split_index], X_train_val[split_index:]
-                y_train, y_val = y_train_val[:split_index], X_train_val[split_index:]
-            else:
-                X_train, X_val = X_train_val[:-valid_size], X_train_val[-valid_size:]
-                y_train, y_val = X_train_val[:-valid_size], X_train_val[-valid_size:]
-
-            self.track_window = kwargs.get('track_window', X_train_val.shape[0])
-            self.sliding_window = kwargs.get('sliding_window', X_train.shape[0])
             self.test_window = X_test.shape[0]
+            self.track_window = X_train_val.shape[0]
+
+            sliding_window = kwargs.get('sliding_window', None)
+            if sliding_window:
+                if kwargs.get('size_in_month', False):
+                    train_end_date = X_train_val['date'].max() - pd.tseries.offsets.DateOffset(months=test_size)
+                    train_start_date = train_end_date - pd.tseries.offsets.DateOffset(months=sliding_window)
+                    valid_size = X_train_val[(X_train_val['date'] > train_end_date)].shape[0]
+                    self.sliding_window = X_train_val[(X_train_val['date'] > train_start_date) & (X_train_val['date'] <= train_end_date)].shape[0]
+                else:
+                    self.sliding_window = sliding_window
+                X_train, X_val = X_train_val[-valid_size-self.sliding_window:-valid_size], X_train_val[-valid_size:]
+                y_train, y_val = y_train_val[-valid_size-self.sliding_window:-valid_size], y_train_val[-valid_size:]
+            else:
+                valid_size = kwargs.get('valid_size', 0.2)
+                if type(valid_size) is float:
+                    split_index = int(X_train_val.shape[0] * (1-valid_size))
+                    X_train, X_val = X_train_val[:split_index], X_train_val[split_index:]
+                    y_train, y_val = y_train_val[:split_index], X_train_val[split_index:]
+                else:
+                    X_train, X_val = X_train_val[:-valid_size], X_train_val[-valid_size:]
+                    y_train, y_val = y_train_val[:-valid_size], y_train_val[-valid_size:]
+                self.sliding_window = X_train.shape[0]
+
             logger.info("track/sliding/test window size: {}, {}, {}".format(self.track_window, self.sliding_window, self.test_window))
         else:
-            #X_train_val, X_test, y_train_val, y_test = train_test_split(self.X, self.y, test_size=test_size, random_state=5)
+            valid_size = kwargs.get('valid_size', 0.2)
             X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=valid_size, random_state=5)
+            logger.debug("train/valid/test size: {}, {}, {}".format(X_train.shape[0], X_val.shape[0], X_test.shape[0]))
+
         self.X_train_val = X_train_val
         self.y_train_val = y_train_val
         self.X_train = X_train
@@ -101,7 +136,6 @@ class ModelManager:
         self.y_val = y_val
         self.X_test = X_test
         self.y_test = y_test
-        logger.debug("train/valid/test size: {}, {}, {}".format(X_train.shape[0], X_val.shape[0], X_test.shape[0]))
 
     def validate(self, **kwargs):
         param_grid = kwargs.get('param_grid', None)
@@ -117,51 +151,72 @@ class ModelManager:
                 n_splits = int(self.track_window / self.test_window + 0.5) - 1
                 tscv = TimeSeriesSplit(max_train_size=self.sliding_window, n_splits=n_splits)
                 gs_args['cv'] = tscv
+                i = 0
                 for train, test in tscv.split(self.X_train_val):
-                    logger.debug("walk-forward train:%s, test:%s" % (train.shape, test.shape))
-                self.model = GridSearchCV(self.model, param_grid, **gs_args)
-                logger.info("{}-fold walk-forward validation".format(n_splits))
-                logger.debug("track_window:{}, sliding_window:{}, test_window:{}".format(self.track_window, self.sliding_window, self.test_window))
+                    logger.debug("%s-fold walk-forward train:%s, test:%s, scope: %s ~ %s" % (i+1, train.shape, test.shape, train[0], test[-1]))
+                    i += 1
+                #n_splits = int((self.track_window - self.sliding_window) / self.test_window)
+                #wfs = walk_forward_split(n_splits, self.test_window, self.sliding_window)
+                #gs_args['cv'] = wfs
+                #for train, test in wfs:
+                #    logger.debug("walk-forward train:%s, test:%s, scope:%s ~ %s" % (train.shape, test.shape, train[0], test[-1]))
+                #self.model = GridSearchCV(self.model, param_grid, **gs_args)
+                #wfs = _split(self.track_window, self.test_window, self.sliding_window)
+                #gs_args['cv'] = wfs
+                #for train, test in wfs:
+                #    logger.debug("walk-forward train:%s, test:%s, scope:%s ~ %s" % (train.shape, test.shape, train[0], test[-1]))
+                #self.model = GridSearchCV(self.model, param_grid, **gs_args)
             else:
                 self.model = GridSearchCV(self.model, param_grid, **gs_args)
                 fold = gs_args.get('cv', 3)
                 logger.info("{}-fold cross validation: train/valid size {}".format(fold, int(self.X_train_val.shape[0]/fold)))
+
+            X_train = get_valid_columns(self.X_train_val)
+            y_train = self.y_train_val
+            logger.debug('training size: {}'.format(X_train.shape[0]))
+            self.model.fit(X_train, y_train)
+            return self.model.best_score_
         elif 'BayesianOptimization' in kwargs:
             return
-        else: # manual validation with train/valid dataset
+        else: # (not work) manual validation with train/valid dataset
             if self.time_series:
                 params = param_grid.keys()
                 scores = []
                 for values in itertools.product(*param_grid.values()):
                     param_values = dict(zip(params, values))
-                    estimator = self.model(**param_values)
+                    estimator = self.model.set_params(**param_values)
                     estimator.fit(get_valid_columns(self.X_train), self.y_train)
                     y_pred = estimator.predict(get_valid_columns(self.X_val))
-                    score = self.measure_metrics(self.y_val, y_pred)
-                    scores.append({**param_values, 'score': score})
+                    score = -self.measure_metrics(self.y_val, y_pred)
+                    scores.append({'param': param_values, 'score': score})
 
                 best_params = max(scores, key=lambda x: x['score'])
-                best_params.pop('score', None)
             else:
                 return
 
-            self.model = self.model(**best_params)
+            self.model = self.model.set_params(**best_params['param'])
+            return best_params['score']
 
-    def train_and_predict(self):
-        if self.time_series:
-            train = get_valid_columns(self.X_train_val[-self.sliding_window:])
-            self.model.fit(train, self.y_train_val[-self.sliding_window:])
-        else:
-            train = get_valid_columns(self.X_train_val)
-            self.model.fit(train, self.y_train_val)
 
-        y = self.model.predict(get_valid_columns(self.X_train_val))
-        self.train_error = self.measure_metrics(y, self.y_train_val)
+    def train(self, **kwargs):
+        #if self.time_series:
+        #    X_train = get_valid_columns(self.X_train_val[-self.sliding_window:])
+        #    y_train = self.y_train_val[-self.sliding_window:]
+        #else:
+        #    X_train = get_valid_columns(self.X_train_val)
+        #    y_train = self.y_train_val
 
-        if self.modeldb:
-            self.y_predict = self.model.predict_sync(get_valid_columns(self.X_test))
-        else:
-            self.y_predict = self.model.predict(get_valid_columns(self.X_test))
+        X_train = get_valid_columns(self.X_train_val)
+        y_train = self.y_train_val
+        logger.debug('training size: {}'.format(X_train.shape[0]))
+        estimator = self.get_best_model()
+        estimator.fit(X_train, y_train)
+        y = estimator.predict(X_train)
+        self.train_error = self.measure_metrics(y, y_train)
+
+    def test(self):
+        estimator = self.get_best_model()
+        self.y_predict = estimator.predict(get_valid_columns(self.X_test))
         self.residual = self.y_predict - self.y_test
         self.test_error = self.measure_metrics(self.y_predict, self.y_test)
 
@@ -173,10 +228,19 @@ class ModelManager:
         return error
 
     def run(self, **kwargs):
+        if 'dataset' in kwargs: self.set_data(kwargs['dataset'])
         self.split(**kwargs)
-        param_grid = kwargs.get('param_grid', None)
-        self.validate(**kwargs)
-        return self.train_and_predict()
+        if kwargs.get('predict', None):
+            self.train()
+            return self.predict(kwargs['predict'])
+        elif kwargs.get('param_grid', None):
+            return self.validate(**kwargs)
+        else:
+            self.train(**kwargs)
+            return self.test()
+
+    def predict(self, X_predict):
+        return self.model.predict(get_valid_columns(X_predict))
 
     def check_predicted(self):
         if not self.predicted:
@@ -197,7 +261,7 @@ class ModelManager:
 
     def get_best_model(self):
         if self.type == ModelType.GRID_SEARCH:
-            return self.model.best_estimator_
+            return self.model.best_estimator_ if hasattr(self.model, 'best_estimator_') else self.model
         else:
             return self.model
 
@@ -255,3 +319,4 @@ class ModelManager:
         plot_trends(df_learning_curve, ['mean_train_score','mean_test_score'])
 
         return [results['params'][i] for i in np.argsort(results['rank_test_score'])[::-1]]
+

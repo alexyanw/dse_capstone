@@ -51,6 +51,7 @@ class Preprocess:
         'view',
         'pool',
         'sqft_zip_avg',
+        'sqft_over_zip_avg',
         'sqft_price_zip_avg',
         'sold_price_zip_avg',
         'impr_over_land',
@@ -65,6 +66,9 @@ class Preprocess:
         'avg_high_rating',
         'lon',
         'lat',
+        #'zip',
+        'eval_zip_avg',
+        'eval_over_zip_avg',
     ]
     features_underwork = [
         'zip',
@@ -75,6 +79,7 @@ class Preprocess:
         'sold_price',
         'sqft_price',
         'sold_year',
+        'sold_month',
         'sold_age',
         'sale_count_zip',
         #'prop_count_zip',
@@ -89,6 +94,7 @@ class Preprocess:
         'pool': transform_YN,
         'date': lambda self,df,col: pd.to_datetime(df[col]),
         'sold_year': lambda self,df,col: pd.to_datetime(df['date']).dt.year,
+        'sold_month': lambda self,df,col: pd.to_datetime(df['date']).dt.month,
         'sold_age': lambda self,df,col: pd.to_datetime(df['date']).dt.year - df['year_built'],
         'impr_over_land': lambda self,df,col: df['eval_imps'] / df['eval_land'],
         'eval': lambda self,df,col: df['eval_imps'] + df['eval_land'],
@@ -100,8 +106,11 @@ class Preprocess:
         'sqft_zip_avg': partial(get_aggregation, feature='sqft', group='zip', aggfunc='mean'),
         'sqft_price_zip_avg': partial(get_aggregation, feature='sqft_price', group='zip', aggfunc='mean'),
         'sold_price_zip_avg': partial(get_aggregation, feature='sold_price', group='zip', aggfunc='mean'),
+        'eval_zip_avg': partial(get_aggregation, feature='eval', group='zip', aggfunc='mean'),
         'sale_count_zip': partial(get_aggregation, feature='date', group='zip', aggfunc='count'),
         'prop_count_zip': partial(get_property_aggregation, feature='pin', group='zip', aggfunc='count'),
+        'sqft_over_zip_avg': lambda self,df,col: df['sqft'] / df['sqft_zip_avg'],
+        'eval_over_zip_avg': lambda self,df,col: df['eval'] / df['eval_zip_avg'],
         #'turnover_zip':
     }
 
@@ -162,7 +171,10 @@ class Preprocess:
         for f in eng_features:
             logger.info('making {}'.format(f))
             func = Preprocess.feature_engineer[f]
-            df_ret = func(self, df_ret, f)
+            if isinstance(func, partial):
+                df_ret = func(self, df_ret, f)
+            else:
+                df_ret[f] = func(self, df_ret, f)
 
         if kwargs.get('valid', False):
             df_ret = self.remove_invalid(df_ret, feature_set)
@@ -197,7 +209,7 @@ class Preprocess:
             df_ret = func(df_ret)
         return df_ret
 
-    def remove_outlier(self, df, upper=1.5, lower=1.5, column='sqft_price'):
+    def remove_outlier(self, df, upper=.75, lower=.75, column='sqft_price'):
         limits = self.get_zip_stats(df, upper=upper, lower=lower, column=column)
         zips = df['zip'].unique()
         dfs = []

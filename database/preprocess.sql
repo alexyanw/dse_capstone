@@ -50,13 +50,10 @@ WHERE p.par_parcel_number = y.pin AND
 
 DROP VIEW IF EXISTS transactions;
 CREATE VIEW transactions AS
-SELECT
-    pin,
-    code,
-    doc_date date,
-    price sold_price
-FROM county_transactions
-WHERE code != 'M'
+SELECT t.pin, t.code, t.doc_date as date, t.price sold_price
+FROM county_transactions t LEFT OUTER JOIN county_foreclosures f 
+  on t.pin=f.pin and t.doc_date = f.date
+WHERE t.code != 'M' AND f.pin is null
 ;
 
 DROP VIEW IF EXISTS addresses CASCADE;

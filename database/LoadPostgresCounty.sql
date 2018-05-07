@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS county_transactions;
-CREATE TABLE county_transactions (
+CREATE TABLE IF NOT EXISTS county_transactions (
     code varchar(1),
     pin varchar(10),
     trailer_pin varchar(10),
@@ -14,8 +13,7 @@ COPY county_transactions FROM 'c:\wenyan\dse_capstone\data\county\SalesData_AllY
 
 create index county_transaction_pin on county_transactions(pin);
 
-DROP TABLE IF EXISTS county_addresses;
-CREATE TABLE county_addresses (
+CREATE TABLE IF NOT EXISTS county_addresses (
     pin varchar(10),
     str_no varchar(16),
     street varchar(128),
@@ -29,7 +27,7 @@ COPY county_addresses FROM 'c:\wenyan\dse_capstone\data\county\Address.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 create index county_addresses_pin on county_addresses(pin);
 
-CREATE TABLE county_mpr (
+CREATE TABLE IF NOT EXISTS county_mpr (
     pin varchar(10),
     str_no varchar(16),
     street varchar(128),
@@ -40,8 +38,7 @@ CREATE TABLE county_mpr (
 COPY county_mpr FROM 'c:\wenyan\dse_capstone\data\county\MPR_Recent.txt'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 
-DROP TABLE IF EXISTS county_properties CASCADE;
-CREATE TABLE county_properties (
+CREATE TABLE IF NOT EXISTS county_properties (
     par_status                            varchar(1),
     par_parcel_number                     varchar(10),
     par_tax_rate_area                     varchar(5),
@@ -234,8 +231,7 @@ COPY county_properties FROM 'c:\wenyan\dse_capstone\data\county\PARDATA_TAB.txt'
 
 create index county_property_pin on county_properties(par_parcel_number);
 
-DROP TABLE IF EXISTS county_year_built;
-CREATE TABLE county_year_built (
+CREATE TABLE IF NOT EXISTS county_year_built (
     pin varchar(10),
     effective_year integer,
     year_built integer
@@ -243,8 +239,7 @@ CREATE TABLE county_year_built (
 COPY county_year_built FROM 'c:\wenyan\dse_capstone\data\county\YearBuiltALL.csv'
 WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 
-DROP TABLE IF EXISTS addresses_to_geocode CASCADE;
-CREATE TABLE addresses_to_geocode(
+CREATE TABLE IF NOT EXISTS addresses_to_geocode(
     addid serial PRIMARY KEY, 
     address text,
     lon numeric, 
@@ -266,4 +261,18 @@ COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\addresses_to_geocode
 ;
 
 create index addresses_to_geocode_pin on addresses_to_geocode(pin);
+
+CREATE TABLE IF NOT EXISTS county_foreclosures(
+    inst_number varchar(12),
+    date date,
+    doctype smallint,
+    doctypedesc varchar(32),
+    pin	varchar(10),
+    ZIP varchar(5)
+);
+
+COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\county\foreclosure.csv'
+    WITH NULL '' DELIMITER ',' ENCODING 'utf-8'  CSV HEADER;
+;
+
 
