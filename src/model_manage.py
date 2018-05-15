@@ -29,7 +29,7 @@ def remeasure(df_check, threshold=200000):
     return sqrt(mean_squared_error(df_left['predict'], df_left['sold_price']))
 
 def get_valid_columns(df):
-    extra_columns = ['id', 'date']
+    extra_columns = ['id', 'pin', 'date']
     return df[list(set(df.columns) - set(extra_columns))]
 
 
@@ -108,6 +108,7 @@ class ModelManager:
                     valid_size = X_train_val[(X_train_val['date'] > train_end_date)].shape[0]
                     self.sliding_window = X_train_val[(X_train_val['date'] > train_start_date) & (X_train_val['date'] <= train_end_date)].shape[0]
                 else:
+                    valid_size = test_size
                     self.sliding_window = sliding_window
                 X_train, X_val = X_train_val[-valid_size-self.sliding_window:-valid_size], X_train_val[-valid_size:]
                 y_train, y_val = y_train_val[-valid_size-self.sliding_window:-valid_size], y_train_val[-valid_size:]
@@ -160,12 +161,11 @@ class ModelManager:
                 #gs_args['cv'] = wfs
                 #for train, test in wfs:
                 #    logger.debug("walk-forward train:%s, test:%s, scope:%s ~ %s" % (train.shape, test.shape, train[0], test[-1]))
-                #self.model = GridSearchCV(self.model, param_grid, **gs_args)
                 #wfs = _split(self.track_window, self.test_window, self.sliding_window)
                 #gs_args['cv'] = wfs
                 #for train, test in wfs:
                 #    logger.debug("walk-forward train:%s, test:%s, scope:%s ~ %s" % (train.shape, test.shape, train[0], test[-1]))
-                #self.model = GridSearchCV(self.model, param_grid, **gs_args)
+                self.model = GridSearchCV(self.model, param_grid, **gs_args)
             else:
                 self.model = GridSearchCV(self.model, param_grid, **gs_args)
                 fold = gs_args.get('cv', 3)
@@ -199,16 +199,14 @@ class ModelManager:
 
 
     def train(self, **kwargs):
-        #if self.time_series:
-        #    X_train = get_valid_columns(self.X_train_val[-self.sliding_window:])
-        #    y_train = self.y_train_val[-self.sliding_window:]
-        #else:
-        #    X_train = get_valid_columns(self.X_train_val)
-        #    y_train = self.y_train_val
+        if self.time_series:
+            X_train = get_valid_columns(self.X_train_val[-self.sliding_window:])
+            y_train = self.y_train_val[-self.sliding_window:]
+        else:
+            X_train = get_valid_columns(self.X_train_val)
+            y_train = self.y_train_val
 
-        X_train = get_valid_columns(self.X_train_val)
-        y_train = self.y_train_val
-        logger.debug('training size: {}'.format(X_train.shape[0]))
+        logger.info('training data size: {}'.format(X_train.shape))
         estimator = self.get_best_model()
         estimator.fit(X_train, y_train)
         y = estimator.predict(X_train)
@@ -216,12 +214,20 @@ class ModelManager:
 
     def test(self):
         estimator = self.get_best_model()
-        self.y_predict = estimator.predict(get_valid_columns(self.X_test))
+        X_test = get_valid_columns(self.X_test)
+        logger.info('test data size: {}'.format(X_test.shape))
+        self.y_predict = estimator.predict(X_test)
         self.residual = self.y_predict - self.y_test
         self.test_error = self.measure_metrics(self.y_predict, self.y_test)
 
         self.predicted = True
         return self.test_error
+
+    def predict(self, X_predict):
+        X_test = get_valid_columns(X_predict[self.feature_set])
+        logger.info('predict data size: {}'.format(X_test.shape))
+        self.y_predict = self.model.predict(X_test)
+        return self.train_error
 
     def measure_metrics(self, y_true, y_pred):
         error = self.metrics(y_true, y_pred)
@@ -230,17 +236,14 @@ class ModelManager:
     def run(self, **kwargs):
         if 'dataset' in kwargs: self.set_data(kwargs['dataset'])
         self.split(**kwargs)
-        if kwargs.get('predict', None):
-            self.train()
+        if kwargs.get('predict', None) is not None:
+            self.train(**kwargs)
             return self.predict(kwargs['predict'])
         elif kwargs.get('param_grid', None):
             return self.validate(**kwargs)
         else:
             self.train(**kwargs)
             return self.test()
-
-    def predict(self, X_predict):
-        return self.model.predict(get_valid_columns(X_predict))
 
     def check_predicted(self):
         if not self.predicted:
