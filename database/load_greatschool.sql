@@ -7,6 +7,6 @@ CREATE TABLE greatschool_rating (
     rating smallint
 );
 
-COPY greatschool_rating FROM 'c:\wenyan\dse_capstone\data\school_rating.csv'
+COPY greatschool_rating FROM 'c:\wenyan\dse_capstone\data\school_rating_revised.csv'
     WITH NULL '' DELIMITER ';' ENCODING 'utf-8'  CSV HEADER;
 

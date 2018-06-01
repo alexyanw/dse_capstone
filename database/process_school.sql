@@ -53,7 +53,7 @@ AND (g.name ILIKE '%' || s.name || '%'
     )
 ;
 
-CREATE VIEW IF NOT EXISTS school_feature AS
+CREATE VIEW school_feature AS
 with school_elem_rating_zip_avg AS (
   select zip,avg(rating) as rating from schools
   where soctype != 'Private' and rating is not null and elementary=true

@@ -1,15 +1,14 @@
 # dse_capstone - San Diego County Housing Market Analysis
 This repository is used for source code development for analytical tasks. Visualization and prototype project is split to another project.
 
-## python version and modules
-* Anaconda 3.6.4 is used.
-* Python modules installed
+## infrastructure setup
+* python version and modules
+  * Anaconda 3.6.4 is used.
   * conda install sqlalchemy psycopg2
   * conda install -c anaconda seaborn
   * pip install python-dotenv
   * pip install bayesian-optimization
 
-** Setup
 * PostgreSQL 9.6
   * extensions installed
 CREATE EXTENSION postgis;

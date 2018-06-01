@@ -239,6 +239,18 @@ CREATE TABLE IF NOT EXISTS county_year_built (
 COPY county_year_built FROM 'c:\wenyan\dse_capstone\data\county\YearBuiltALL.csv'
 WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 
+CREATE TABLE IF NOT EXISTS county_foreclosures(
+    inst_number varchar(12),
+    date date,
+    doctype smallint,
+    doctypedesc varchar(32),
+    pin	varchar(10),
+    ZIP varchar(5)
+);
+COPY county_foreclosure FROM 'c:\wenyan\dse_capstone\data\county\foreclosure.csv'
+    WITH NULL '' DELIMITER ',' ENCODING 'utf-8'  CSV HEADER;
+;
+
 CREATE TABLE IF NOT EXISTS addresses_to_geocode(
     addid serial PRIMARY KEY, 
     address text,
@@ -259,20 +271,6 @@ CREATE TABLE IF NOT EXISTS addresses_to_geocode(
 COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\addresses_to_geocode.csv'
     WITH NULL '' DELIMITER E'\t' ENCODING 'utf-8'  CSV HEADER;
 ;
-
 create index addresses_to_geocode_pin on addresses_to_geocode(pin);
-
-CREATE TABLE IF NOT EXISTS county_foreclosures(
-    inst_number varchar(12),
-    date date,
-    doctype smallint,
-    doctypedesc varchar(32),
-    pin	varchar(10),
-    ZIP varchar(5)
-);
-
-COPY addresses_to_geocode FROM 'c:\wenyan\dse_capstone\data\county\foreclosure.csv'
-    WITH NULL '' DELIMITER ',' ENCODING 'utf-8'  CSV HEADER;
-;
 
 
