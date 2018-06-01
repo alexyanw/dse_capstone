@@ -1,53 +1,48 @@
-# dse_capstone
-## python modules need be installed
-* conda install sqlalchemy psycopg2
-* conda install -c anaconda seaborn
-* pip install python-dotenv
-* pip install bayesian-optimization
+# dse_capstone - San Diego County Housing Market Analysis
+This repository is used for source code development for analytical tasks. Visualization and prototype project is split to another project.
+
+## python version and modules
+* Anaconda 3.6.4 is used.
+* Python modules installed
+  * conda install sqlalchemy psycopg2
+  * conda install -c anaconda seaborn
+  * pip install python-dotenv
+  * pip install bayesian-optimization
+
+** Setup
+* PostgreSQL 9.6
+  * extensions installed
+CREATE EXTENSION postgis;
+CREATE EXTENSION fuzzystrmatch; --needed for postgis_tiger_geocoder
+CREATE EXTENSION address_standardizer;
+CREATE EXTENSION address_standardizer_data_us;
+CREATE EXTENSION postgis_topology;
+CREATE EXTENSION postgis_tiger_geocoder;
+  * Follow the instructions in database folder to import the data.
 
 ## directory structure
-We try to mimic the directory structure and cookiecutter https://drivendata.github.io/cookiecutter-data-science/, with some adjustment for simplicity.
-
 <pre>
 ├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   └── raw            <- The original, immutable data dump.
+│
+├── data               <- data need be downloaded elsewhere, only description here
+│   ├── README.md      <- data source description
+│
+├── database           <- SQL script to import and process the data
 │
 ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
 │
-├── models             <- Trained and serialized models, model predictions, or model summaries
+├── notebooks
+│   ├── EDA            <- descriptive analysis
+│   ├── working        <- working notebooks for experiments, testing and debugging.
+│   └── modeling       <- notebooks for modeling evolution and regression
 │
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
+├── viz                <- visualization dumps
+│
+├── src                <- python modules developped for both data processing, modeling and visualization
 │
 ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
-│
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── src                <- Source code for use in this project.
-│   ├── __init__.py    <- Makes src a Python module
-│   │
-│   ├── data           <- Scripts to download or generate data
-│   │   └── make_dataset.py
-│   │
-│   ├── features       <- Scripts to turn raw data into features for modeling
-│   │   └── build_features.py
-│   │
-│   ├── models         <- Scripts to train models and then use trained models to make
-│   │   │                 predictions
-│   │   ├── predict_model.py
-│   │   └── train_model.py
-│   │
-│   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-│       └── visualize.py
 │
 └── misc
 
