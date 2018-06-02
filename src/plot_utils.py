@@ -50,18 +50,20 @@ def plot_histogram(df, index_column, hist_column, title=None):
     if not title: title = "histgram " + hist_column
     df_indexed = df
     if index_column: df_indexed = df.set_index(index_column)
-    ax = df_indexed[hist_column].plot(kind='bar', title = title, figsize=(15, 8), legend=True, fontsize=12, secondary_y=True)
+    ax = df_indexed[hist_column].plot(kind='bar', title = title, figsize=(15, 8), legend=True, color='tab:blue', fontsize=12, secondary_y=True)
     ax.set_xlabel(index_column, fontsize=12)
     ax.set_ylabel(hist_column, fontsize=12)
     plt.show()
 
 def plot_histogram_group(df, index_column, hist_columns):
-    fig, ax = plt.subplots(len(hist_columns), 1, figsize=(15,10))
-    df_indexed = df.set_index(index_column)
+    fig, ax = plt.subplots(len(hist_columns), 1, figsize=(15,5*len(hist_columns)))
+    plt.subplots_adjust(hspace=0.3)
+    df_indexed = df
+    if index_column: df_indexed = df.set_index(index_column)
     for i,col in enumerate(hist_columns):
-        df_indexed[col].plot(ax=ax[i], kind='bar', title ="histgram " + col, legend=True, fontsize=12)
-    ax[i].set_xlabel(index_column, fontsize=12)
-    ax[i].set_ylabel(col, fontsize=12)
+        df_indexed[col].plot(ax=ax[i], kind='bar', title =col, legend=True, fontsize=12)
+        if index_column is not None: ax[i].set_xlabel(index_column, fontsize=12)
+        ax[i].set_ylabel(col, fontsize=12)
     plt.show()
 
 def plot_histogram_group_scaled(df, index_column, hist_columns, title=None):
@@ -137,7 +139,7 @@ def plot_joint_dist(df_in, col, target, uc=100, lc=0, ut=100, lt=0):
     df2 = df2[df2[target]>=llimit]
 
     plt.figure(figsize=(10,10))
-    sns.jointplot(x=df2[col].values, y=df2[target].values, size=10, color=color[1])
+    sns.jointplot(x=df2[col].values, y=df2[target].values, size=10, color='g', alpha=0.2)
     plt.ylabel(target, fontsize=12)
     plt.xlabel(col, fontsize=12)
     plt.title(col + ' Vs ' + target, fontsize=15)
@@ -219,3 +221,28 @@ def get_hist_on_price(engine, transaction, target, min_price, max_price, buckets
     if 'debug' in kwargs:
         print(sql)
     return pd.read_sql_query(sql, engine)
+
+
+def plot_trend_cluster(df_zip_series, labels, ax=None, title=None, verbose=False):
+    rgb_values = sns.color_palette("Set1", labels.max()+1)
+    if labels.max() <= 6:
+        rgb_values = ['red','green','orange','blue','yellow', 'purple', 'black']
+
+    if not ax:
+        fig, ax = plt.subplots(figsize=(9,6))
+
+    for idx,zip in enumerate(df_zip_series.index):
+        color = rgb_values[labels[idx]]
+        df_zip_series.loc[zip].plot(ax=ax, kind='line', label=zip, c=color)
+
+    if df_zip_series.shape[0] < 10:
+        plt.legend(loc='best')
+
+    if not title: title = "median sqft_price trend per zip with clustering"
+    ax.set_title(title)
+
+    zips_valid = df_zip_series.index
+    if verbose:
+        for i in range(labels.max()+1):
+            color = rgb_values[i]
+            print('Cluster %i (%s): %s' % (i, color, ', '.join(zips_valid[labels == i])))
