@@ -9,11 +9,15 @@ from sklearn.utils.multiclass import unique_labels
 from sklearn import cluster, mixture
 
 class MultiSegmentRegressor(BaseEstimator, RegressorMixin):
-    def __init__(self, n_clusters=3, feature_set=[], cluster_features=['sold_price'], cluster_on_target=False):
+    def __init__(self, n_clusters=3, feature_set=[], cluster_features=['sold_price'], cluster_on_target=False, **kwargs):
         self.n_clusters = n_clusters
-        self.feature_set = feature_set
+        self.feature_set = feature_set.copy()
+        self.feature_set.remove('date')
+        self.feature_set.remove('pin')
         self.cluster_features = cluster_features
-        self.models = [RandomForestRegressor(n_estimators=100, max_depth=14, n_jobs=-1, random_state=17) for i in range(n_clusters)]
+        n_estimators=kwargs.get('n_estimators', 20)
+        max_depth =kwargs.get('max_depth', 12)
+        self.models = [RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, n_jobs=-1, random_state=17) for i in range(n_clusters)]
         self.cluster_on_target = cluster_on_target
 
     def fit(self, X, y):

@@ -72,7 +72,7 @@ class ModelRegression:
             mmc = ModelManager(None, self.features, self.model, **kwargs)
             start_month = test_idx - self.track_window
             end_month = start_month + self.track_window + self.test_window
-            df_track = self.get_window(df_or_pp, start_month, end_month)
+            df_track,dummy = self.get_window(df_or_pp, start_month, end_month)
             logger.info('validation - data shape: {}, sliding(in month): {}, period: {} ~ {}'.format(df_track.shape, s*self.test_window, df_track['date'].min().date(), df_track['date'].max().date()))
             #score = mmc.run(dataset=df_track, sliding_window=s*self.test_window, test_size=self.test_window, size_in_month=True, **kwargs)
             score = mmc.run(dataset=df_track, sliding_window=s*self.test_window, test_size=self.test_window, size_in_month=True, **kwargs)
